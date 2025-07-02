@@ -46,15 +46,19 @@ Return strictly in JSON format:
     )
 
     import json
-    try:
-        parsed = json.loads(response.choices[0].message.content)
-        return jsonify(parsed)
-    except json.JSONDecodeError:
-        # fallback if GPT returns slightly broken JSON
-        return jsonify({
-            "raw_advice": response.choices[0].message.content,
-            "error": "Could not parse JSON, returning raw text instead."
-        })
+try:
+    # remove markdown code block if present
+    cleaned_content = response.choices[0].message.content.strip()
+    if cleaned_content.startswith("```json"):
+        cleaned_content = cleaned_content.replace("```json", "").replace("```", "").strip()
+    parsed = json.loads(cleaned_content)
+    return jsonify(parsed)
+except json.JSONDecodeError:
+    return jsonify({
+        "raw_advice": response.choices[0].message.content,
+        "error": "Could not parse JSON, returning raw text instead."
+    })
+
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
