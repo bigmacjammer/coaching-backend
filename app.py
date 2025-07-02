@@ -28,7 +28,7 @@ Team member profile:
 - Weekly Performance Check-ins: {data['weekly_checkins']}
 - Career Goals: {data['career_goals']}
 
-Return in JSON format:
+Return strictly in JSON format:
 {{
   "coaching_tips": [ "tip1", "tip2", "tip3" ],
   "conversation_phrases": [ "phrase1", "phrase2", "phrase3" ],
@@ -39,7 +39,7 @@ Return in JSON format:
     response = client.chat.completions.create(
         model="gpt-4o",
         messages=[
-            {"role": "system", "content": "You are an expert team coach."},
+            {"role": "system", "content": "You are an expert team coach. Always respond strictly in JSON only."},
             {"role": "user", "content": prompt}
         ],
         temperature=0.3
@@ -49,11 +49,14 @@ Return in JSON format:
     try:
         parsed = json.loads(response.choices[0].message.content)
         return jsonify(parsed)
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-import os
+    except json.JSONDecodeError:
+        # fallback if GPT returns slightly broken JSON
+        return jsonify({
+            "raw_advice": response.choices[0].message.content,
+            "error": "Could not parse JSON, returning raw text instead."
+        })
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
+
